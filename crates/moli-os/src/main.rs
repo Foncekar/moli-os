@@ -1347,6 +1347,7 @@ const KINDS: &[&str] = &[
     "bambu",
     "esphome",
     "alexa",
+    "netatmo",
     "sonos",
     "airplay",
     "reolink",
@@ -1601,6 +1602,9 @@ fn build_driver(
             config.options.clone().try_into().with_context(context)?,
         )),
         "sonos" => Arc::new(moli_sonos::Sonos::new(
+            config.options.clone().try_into().with_context(context)?,
+        )),
+        "netatmo" => Arc::new(moli_netatmo::Netatmo::new(
             config.options.clone().try_into().with_context(context)?,
         )),
         "airplay" => Arc::new(moli_airplay::Airplay::new(
