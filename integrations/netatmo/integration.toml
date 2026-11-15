@@ -1,8 +1,8 @@
 [integration]
 id = "netatmo"
-name = "Caméras Netatmo (Presence, Welcome, sonnette)"
-brands = ["Netatmo"]
-models = ["Presence", "Welcome", "Smart Video Doorbell"]
+name = "Netatmo (caméras Presence, Welcome, sonnette ; volets Bubendorff)"
+brands = ["Netatmo", "Bubendorff"]
+models = ["Presence", "Welcome", "Smart Video Doorbell", "iDiamant"]
 transport = "https"
 driver = "netatmo"
 crate = "moli-netatmo"
@@ -18,7 +18,7 @@ vars = []
 options = []
 
 [origin]
-reused = "Netatmo Security API (dev.netatmo.com: /api/homesdata, /api/homestatus, /api/setstate, local /live/snapshot_720.jpg)"
+reused = "Netatmo Security API (dev.netatmo.com: /api/homesdata, /api/homestatus, /api/setstate, volets NBR : target_position, local /live/snapshot_720.jpg)"
 author = "agent"
 
 [[fixture]]
