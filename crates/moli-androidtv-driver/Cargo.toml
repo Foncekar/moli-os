@@ -1,0 +1,22 @@
+[package]
+name = "moli-androidtv-driver"
+description = "Moli OS driver for Android TV boxes and TVs (Android TV Remote, Cast, ADB)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+moli-i18n.workspace = true
+anyhow.workspace = true
+moli-androidtv.workspace = true
+moli-core.workspace = true
+moli-runtime.workspace = true
+serde.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+
+[lints]
+workspace = true

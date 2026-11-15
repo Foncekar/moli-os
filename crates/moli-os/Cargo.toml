@@ -39,6 +39,7 @@ moli-netatmo.workspace = true
 moli-moonraker.workspace = true
 moli-frigate.workspace = true
 moli-philips.workspace = true
+moli-androidtv-driver.workspace = true
 moli-melcloud.workspace = true
 moli-kasa.workspace = true
 moli-recycleapp.workspace = true

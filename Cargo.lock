@@ -1645,6 +1645,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "moli-androidtv-driver"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "moli-androidtv",
+ "moli-core",
+ "moli-i18n",
+ "moli-runtime",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "moli-announce"
 version = "0.1.0"
 dependencies = [
@@ -2210,6 +2223,7 @@ dependencies = [
  "moli-airplay",
  "moli-airzone",
  "moli-alexa",
+ "moli-androidtv-driver",
  "moli-api",
  "moli-assistant",
  "moli-automation",

@@ -41,6 +41,7 @@ moli-sonos = { path = "crates/moli-sonos" }
 moli-bambu = { path = "crates/moli-bambu" }
 moli-frigate = { path = "crates/moli-frigate" }
 moli-philips = { path = "crates/moli-philips" }
+moli-androidtv-driver = { path = "crates/moli-androidtv-driver" }
 moli-melcloud = { path = "crates/moli-melcloud" }
 moli-kasa = { path = "crates/moli-kasa" }
 moli-recycleapp = { path = "crates/moli-recycleapp" }
