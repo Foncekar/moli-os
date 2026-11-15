@@ -33,10 +33,28 @@
               "room_id": "20"
             },
             {
+              "id": "aa:bb:cc:dd:ee:10",
+              "type": "NBG",
+              "name": "Passerelle",
+              "room_id": "30",
+              "modules_bridged": [
+                "aa:bb:cc:dd:ee:03",
+                "aa:bb:cc:dd:ee:04"
+              ]
+            },
+            {
               "id": "aa:bb:cc:dd:ee:03",
               "type": "NBR",
               "name": "Volet",
-              "room_id": "30"
+              "room_id": "30",
+              "bridge": "aa:bb:cc:dd:ee:10"
+            },
+            {
+              "id": "aa:bb:cc:dd:ee:04",
+              "type": "NBR",
+              "name": "Volet fenêtre",
+              "room_id": "20",
+              "bridge": "aa:bb:cc:dd:ee:10"
             }
           ]
         }
@@ -65,11 +83,35 @@
             "monitoring": "on"
           },
           {
+            "id": "aa:bb:cc:dd:ee:10",
+            "type": "NBG",
+            "firmware_revision": 50,
+            "wifi_strength": 26,
+            "reachable": true
+          },
+          {
             "id": "aa:bb:cc:dd:ee:03",
             "type": "NBR",
-            "reachable": true,
             "current_position": 40,
-            "target_position": 100
+            "target_position": 100,
+            "target_position:step": 100,
+            "firmware_revision": 13,
+            "rf_strength": 0,
+            "last_seen": 1700000000,
+            "reachable": true,
+            "bridge": "aa:bb:cc:dd:ee:10"
+          },
+          {
+            "id": "aa:bb:cc:dd:ee:04",
+            "type": "NBR",
+            "current_position": 0,
+            "target_position": 0,
+            "target_position:step": 100,
+            "firmware_revision": 13,
+            "rf_strength": 0,
+            "last_seen": 1700000000,
+            "reachable": true,
+            "bridge": "aa:bb:cc:dd:ee:10"
           }
         ]
       }
