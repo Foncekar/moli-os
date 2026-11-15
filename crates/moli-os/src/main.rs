@@ -1341,6 +1341,7 @@ const KINDS: &[&str] = &[
     "izypower",
     "solarman",
     "vicare",
+    "synology",
     "philips",
     "frigate",
     "bambu",
@@ -1568,6 +1569,7 @@ fn build_driver(
         "izypower" => Arc::new(moli_izypower::Izypower::new(
             config.options.clone().try_into().with_context(context)?,
         )),
+        "synology" => configured_driver(config, moli_synology::Synology::new)?,
         "vicare" => Arc::new(moli_vicare::Vicare::new(
             config.options.clone().try_into().with_context(context)?,
         )),
