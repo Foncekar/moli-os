@@ -1,6 +1,6 @@
 [package]
 name = "moli-netatmo"
-description = "Moli OS driver for Netatmo Security cameras (Presence, Welcome, Doorbell)."
+description = "Moli OS driver for Netatmo Security cameras (Presence, Welcome, Doorbell) and Bubendorff shutters."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

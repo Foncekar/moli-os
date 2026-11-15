@@ -1044,5 +1044,10 @@
   "pilotes.netatmo.aucune_image_statut": "la caméra Netatmo n'a pas renvoyé d'image (HTTP {status})",
   "pilotes.netatmo.camera_inconnue": "caméra Netatmo inconnue",
   "pilotes.netatmo.point_inconnu": "{point} ne se commande pas",
-  "pilotes.netatmo.echec": "Netatmo n'a pas pu exécuter la commande : {why}"
+  "pilotes.netatmo.echec": "Netatmo n'a pas pu exécuter la commande : {why}",
+  "pilotes.netatmo.volet": "Volet roulant Bubendorff",
+  "pilotes.netatmo.ouverture": "Ouverture",
+  "pilotes.netatmo.commande": "Commande",
+  "pilotes.netatmo.deplacement": "Déplacement",
+  "pilotes.netatmo.position_invalide": "l'ouverture attend un nombre entre 0 et 100"
 }

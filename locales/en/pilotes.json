@@ -1044,5 +1044,10 @@
   "pilotes.netatmo.aucune_image_statut": "the Netatmo camera returned no image (HTTP {status})",
   "pilotes.netatmo.camera_inconnue": "unknown Netatmo camera",
   "pilotes.netatmo.point_inconnu": "{point} cannot be controlled",
-  "pilotes.netatmo.echec": "Netatmo could not run the command: {why}"
+  "pilotes.netatmo.echec": "Netatmo could not run the command: {why}",
+  "pilotes.netatmo.volet": "Bubendorff roller shutter",
+  "pilotes.netatmo.ouverture": "Opening",
+  "pilotes.netatmo.commande": "Command",
+  "pilotes.netatmo.deplacement": "Movement",
+  "pilotes.netatmo.position_invalide": "the opening takes a number from 0 to 100"
 }

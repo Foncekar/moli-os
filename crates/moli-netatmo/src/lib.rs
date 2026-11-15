@@ -23,6 +23,9 @@ use serde::Deserialize;
 use serde_json::{Value as Json, json};
 use tokio::time::{Instant, MissedTickBehavior};
 
+mod shutter;
+use shutter::ShutterInfo;
+
 const API_HOST: &str = "api.netatmo.com";
 const USER_AGENT: &str = "MoliOS/0.1";
 const CLIENT_ID_KEY: &str = "client_id";
@@ -637,6 +640,7 @@ async fn sync_cameras(
     ctx: &mut DriverCtx,
     token: &str,
     cameras: &mut HashMap<DeviceId, CameraInfo>,
+    shutters: &mut HashMap<DeviceId, ShutterInfo>,
 ) -> anyhow::Result<()> {
     let (status, body) = api_call(Method::GET, "/api/homesdata", token, None).await?;
     if !status.is_success() {
@@ -660,6 +664,10 @@ async fn sync_cameras(
         cameras.insert(id, cam);
     }
     cameras.retain(|id, _| seen.contains(id));
+    *shutters = shutter::discover(ctx, &body, config.home_id.as_deref());
+    for (id, found) in shutters.iter() {
+        ctx.upsert_device(shutter::build_device(ctx, id, found));
+    }
     Ok(())
 }
 
@@ -667,8 +675,13 @@ async fn poll_all_homes(
     ctx: &mut DriverCtx,
     token: &str,
     cameras: &HashMap<DeviceId, CameraInfo>,
+    shutters: &HashMap<DeviceId, ShutterInfo>,
 ) -> anyhow::Result<()> {
-    let mut home_ids: Vec<String> = cameras.values().map(|c| c.home_id.clone()).collect();
+    let mut home_ids: Vec<String> = cameras
+        .values()
+        .map(|c| c.home_id.clone())
+        .chain(shutters.values().map(|s| s.home_id.clone()))
+        .collect();
     home_ids.sort();
     home_ids.dedup();
 
@@ -684,6 +697,10 @@ async fn poll_all_homes(
                     continue;
                 };
                 let id = ctx.device_id(&native_id(mac));
+                if shutters.contains_key(&id) {
+                    shutter::publish(ctx, &id, &shutter::decode_shutter_status(m));
+                    continue;
+                }
                 let Some(cam) = cameras.get(&id) else {
                     continue;
                 };
@@ -721,6 +738,9 @@ async fn poll_all_homes(
             }
         }
 
+        if !cameras.values().any(|c| c.home_id == home_id) {
+            continue;
+        }
         let events_path = format!("/api/getevents?home_id={home_id}&size=15");
         if let Ok((ev_status, ev_body)) = api_call(Method::GET, &events_path, token, None).await
             && ev_status.is_success()
@@ -808,9 +828,14 @@ async fn handle_command(
     ctx: &mut DriverCtx,
     token: &str,
     cameras: &HashMap<DeviceId, CameraInfo>,
+    shutters: &HashMap<DeviceId, ShutterInfo>,
     cmd: CommandRequest,
 ) {
     let id = cmd.device.id.clone();
+    if let Some(found) = shutters.get(&id) {
+        shutter::handle_command(ctx, token, found, &id, cmd).await;
+        return;
+    }
     let Some(cam) = cameras.get(&id) else {
         cmd.reply(Err(moli_i18n::tr!("pilotes.netatmo.camera_inconnue")));
         return;
@@ -911,8 +936,9 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
     };
 
     let mut cameras: HashMap<DeviceId, CameraInfo> = HashMap::new();
-    sync_cameras(config, ctx, &initial_token, &mut cameras).await?;
-    poll_all_homes(ctx, &initial_token, &cameras).await?;
+    let mut shutters: HashMap<DeviceId, ShutterInfo> = HashMap::new();
+    sync_cameras(config, ctx, &initial_token, &mut cameras, &mut shutters).await?;
+    poll_all_homes(ctx, &initial_token, &cameras, &shutters).await?;
     ctx.ready();
 
     let mut status_tick = tokio::time::interval(POLL_STATUS);
@@ -929,13 +955,13 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
                 let Some(token) = ensure_token(ctx, &client_id, &client_secret, &mut cached_token).await? else {
                     return Ok(());
                 };
-                poll_all_homes(ctx, &token, &cameras).await?;
+                poll_all_homes(ctx, &token, &cameras, &shutters).await?;
             }
             _ = homes_tick.tick() => {
                 let Some(token) = ensure_token(ctx, &client_id, &client_secret, &mut cached_token).await? else {
                     return Ok(());
                 };
-                sync_cameras(config, ctx, &token, &mut cameras).await?;
+                sync_cameras(config, ctx, &token, &mut cameras, &mut shutters).await?;
             }
             cmd = ctx.next_command() => {
                 let Some(cmd) = cmd else { return Ok(()) };
@@ -943,7 +969,7 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
                     cmd.reply(Err(moli_i18n::tr!("pilotes.netatmo.identifiants_manquants", instance = ctx.instance(), missing = REFRESH_KEY)));
                     return Ok(());
                 };
-                handle_command(ctx, &token, &cameras, cmd).await;
+                handle_command(ctx, &token, &cameras, &shutters, cmd).await;
             }
         }
     }
