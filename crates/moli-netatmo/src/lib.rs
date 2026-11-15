@@ -664,10 +664,7 @@ async fn sync_cameras(
         cameras.insert(id, cam);
     }
     cameras.retain(|id, _| seen.contains(id));
-    *shutters = shutter::discover(ctx, &body, config.home_id.as_deref());
-    for (id, found) in shutters.iter() {
-        ctx.upsert_device(shutter::build_device(ctx, id, found));
-    }
+    *shutters = shutter::sync(ctx, token, &body, config.home_id.as_deref()).await;
     Ok(())
 }
 

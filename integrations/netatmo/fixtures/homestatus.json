@@ -92,7 +92,7 @@
           {
             "id": "aa:bb:cc:dd:ee:03",
             "type": "NBR",
-            "current_position": 40,
+            "current_position": 0,
             "target_position": 100,
             "target_position:step": 100,
             "firmware_revision": 13,

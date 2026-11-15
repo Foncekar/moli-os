@@ -1049,5 +1049,6 @@
   "pilotes.netatmo.ouverture": "Opening",
   "pilotes.netatmo.commande": "Command",
   "pilotes.netatmo.deplacement": "Movement",
-  "pilotes.netatmo.position_invalide": "the opening takes a number from 0 to 100"
+  "pilotes.netatmo.position_invalide": "the opening takes a number from 0 to 100",
+  "pilotes.netatmo.position_pas": "this shutter only takes 0 or 100 % (steps of {step} %)"
 }
