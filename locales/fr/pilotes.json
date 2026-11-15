@@ -980,5 +980,6 @@
   "pilotes.netatmo.ouverture": "Ouverture",
   "pilotes.netatmo.commande": "Commande",
   "pilotes.netatmo.deplacement": "Déplacement",
-  "pilotes.netatmo.position_invalide": "l'ouverture attend un nombre entre 0 et 100"
+  "pilotes.netatmo.position_invalide": "l'ouverture attend un nombre entre 0 et 100",
+  "pilotes.netatmo.position_pas": "ce volet n'accepte que 0 ou 100 % (pas de {step} %)"
 }
