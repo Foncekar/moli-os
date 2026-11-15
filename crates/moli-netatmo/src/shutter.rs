@@ -28,6 +28,9 @@ pub struct ShutterInfo {
     pub mac_id: String,
     pub name: String,
     pub room: Option<String>,
+    /// The NBG gateway the shutter is paired with: `setstate` refuses a
+    /// shutter ("Invalid device_id") when it is not named with it.
+    pub bridge: Option<String>,
 }
 
 pub fn parse_shutters(body: &Json, filter_home: Option<&str>) -> Vec<ShutterInfo> {
@@ -61,6 +64,7 @@ pub fn parse_shutters(body: &Json, filter_home: Option<&str>) -> Vec<ShutterInfo
                 name: m["name"]
                     .as_str()
                     .map_or_else(|| "Bubendorff".to_owned(), |n| n.trim().to_owned()),
+                bridge: m["bridge"].as_str().map(str::to_owned),
                 room: m["room_id"]
                     .as_str()
                     .and_then(|rid| rooms.get(rid).copied())
@@ -191,12 +195,11 @@ pub async fn handle_command(
 ) {
     let outcome: anyhow::Result<()> = async {
         let target = target(&cmd.key, &cmd.value)?;
-        let body = json!({
-            "home": {
-                "id": shutter.home_id,
-                "modules": [{ "id": shutter.mac_id, "target_position": target }]
-            }
-        });
+        let mut module = json!({ "id": shutter.mac_id, "target_position": target });
+        if let Some(bridge) = &shutter.bridge {
+            module["bridge"] = json!(bridge);
+        }
+        let body = json!({ "home": { "id": shutter.home_id, "modules": [module] } });
         let (status, answer) = api_call(Method::POST, "/api/setstate", token, Some(&body)).await?;
         if !status.is_success() {
             bail!("HTTP {} {}", status.as_u16(), answer);
@@ -247,6 +250,7 @@ mod tests {
         assert_eq!(found.len(), 2);
         assert_eq!(found[0].name, "Volet");
         assert_eq!(found[0].room.as_deref(), Some("Salon"));
+        assert_eq!(found[0].bridge.as_deref(), Some("aa:bb:cc:dd:ee:10"));
         assert!(parse_shutters(&fixture()["homesdata"], Some("other")).is_empty());
     }
 
