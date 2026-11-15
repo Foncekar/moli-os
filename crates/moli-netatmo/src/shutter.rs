@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn finds_the_shutter_and_leaves_the_cameras() {
         let found = parse_shutters(&fixture()["homesdata"], None);
-        assert_eq!(found.len(), 1);
+        assert_eq!(found.len(), 2);
         assert_eq!(found[0].name, "Volet");
         assert_eq!(found[0].room.as_deref(), Some("Salon"));
         assert!(parse_shutters(&fixture()["homesdata"], Some("other")).is_empty());
@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn reads_position_and_direction() {
-        let status = &fixture()["homestatus"]["body"]["home"]["modules"][2];
+        let status = &fixture()["homestatus"]["body"]["home"]["modules"][3];
         let decoded = decode_shutter_status(status);
         assert!(decoded.online);
         assert_eq!(decoded.position, Some(40.0));
