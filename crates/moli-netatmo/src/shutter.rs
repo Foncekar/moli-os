@@ -31,6 +31,9 @@ pub struct ShutterInfo {
     /// The NBG gateway the shutter is paired with: `setstate` refuses a
     /// shutter ("Invalid device_id") when it is not named with it.
     pub bridge: Option<String>,
+    /// The resolution of the position, in % (`target_position:step` of the
+    /// status): 100 for a shutter that is all or nothing, 1 when unknown.
+    pub step: f64,
 }
 
 pub fn parse_shutters(body: &Json, filter_home: Option<&str>) -> Vec<ShutterInfo> {
@@ -65,6 +68,7 @@ pub fn parse_shutters(body: &Json, filter_home: Option<&str>) -> Vec<ShutterInfo
                     .as_str()
                     .map_or_else(|| "Bubendorff".to_owned(), |n| n.trim().to_owned()),
                 bridge: m["bridge"].as_str().map(str::to_owned),
+                step: 1.0,
                 room: m["room_id"]
                     .as_str()
                     .and_then(|rid| rooms.get(rid).copied())
@@ -130,7 +134,7 @@ pub fn build_device(ctx: &DriverCtx, id: &DeviceId, shutter: &ShutterInfo) -> De
                 Kind::Numeric {
                     min: Some(0.0),
                     max: Some(100.0),
-                    step: Some(1.0),
+                    step: Some(shutter.step),
                 },
                 true,
                 Semantic::Position,
@@ -166,11 +170,17 @@ pub fn publish(ctx: &DriverCtx, id: &DeviceId, status: &ShutterStatus) {
 }
 
 /// The `target_position` an order of the `position` or `control` point asks.
-fn target(key: &str, value: &Value) -> anyhow::Result<i64> {
+fn target(key: &str, value: &Value, step: f64) -> anyhow::Result<i64> {
     match (key, value) {
         ("position", v) => match v.as_f64() {
             #[allow(clippy::cast_possible_truncation)]
-            Some(p) if (0.0..=100.0).contains(&p) => Ok(p.round() as i64),
+            Some(p) if (0.0..=100.0).contains(&p) => {
+                if step > 1.0 && (p % step).abs() > f64::EPSILON && (100.0 - p).abs() > f64::EPSILON
+                {
+                    bail!(moli_i18n::tr!("pilotes.netatmo.position_pas", step = step));
+                }
+                Ok(p.round() as i64)
+            }
             _ => bail!(moli_i18n::tr!("pilotes.netatmo.position_invalide")),
         },
         ("control", Value::Text(order)) => match &**order {
@@ -194,7 +204,7 @@ pub async fn handle_command(
     cmd: CommandRequest,
 ) {
     let outcome: anyhow::Result<()> = async {
-        let target = target(&cmd.key, &cmd.value)?;
+        let target = target(&cmd.key, &cmd.value, shutter.step)?;
         let mut module = json!({ "id": shutter.mac_id, "target_position": target });
         if let Some(bridge) = &shutter.bridge {
             module["bridge"] = json!(bridge);
@@ -221,15 +231,54 @@ pub async fn handle_command(
     }
 }
 
-/// The shutters of a `homesdata` answer, by device id.
-pub fn discover(
+/// The resolution of a shutter's position, in %, from its status.
+pub fn decode_step(module: &Json) -> f64 {
+    module["target_position:step"]
+        .as_f64()
+        .filter(|s| (1.0..=100.0).contains(s))
+        .unwrap_or(1.0)
+}
+
+/// The shutters of a `homesdata` answer, with the resolution each one tells
+/// in its status (one more call per home), published as devices.
+pub async fn sync(
     ctx: &DriverCtx,
+    token: &str,
     body: &Json,
     filter_home: Option<&str>,
 ) -> HashMap<DeviceId, ShutterInfo> {
-    parse_shutters(body, filter_home)
+    let mut found = parse_shutters(body, filter_home);
+    let mut homes: Vec<String> = found.iter().map(|s| s.home_id.clone()).collect();
+    homes.sort();
+    homes.dedup();
+    for home in homes {
+        let path = format!("/api/homestatus?home_id={home}");
+        let Ok((status, answer)) = api_call(Method::GET, &path, token, None).await else {
+            continue;
+        };
+        if !status.is_success() {
+            continue;
+        }
+        for m in answer["body"]["home"]["modules"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            if let Some(s) = found
+                .iter_mut()
+                .find(|s| m["id"].as_str() == Some(&s.mac_id))
+            {
+                s.step = decode_step(m);
+            }
+        }
+    }
+    found
         .into_iter()
-        .map(|s| (ctx.device_id(&native_id(&s.mac_id)), s))
+        .map(|s| {
+            let id = ctx.device_id(&native_id(&s.mac_id));
+            ctx.upsert_device(build_device(ctx, &id, &s));
+            (id, s)
+        })
         .collect()
 }
 
@@ -259,7 +308,7 @@ mod tests {
         let status = &fixture()["homestatus"]["body"]["home"]["modules"][3];
         let decoded = decode_shutter_status(status);
         assert!(decoded.online);
-        assert_eq!(decoded.position, Some(40.0));
+        assert_eq!(decoded.position, Some(0.0));
         assert_eq!(decoded.moving, Some("up"));
 
         let still = json!({"current_position": 100, "target_position": 100, "reachable": false});
@@ -272,13 +321,27 @@ mod tests {
     #[test]
     fn orders_become_target_positions() {
         let text = |t: &str| Value::Text(t.into());
-        assert_eq!(target("control", &text("open")).unwrap(), 100);
-        assert_eq!(target("control", &text("close")).unwrap(), 0);
-        assert_eq!(target("control", &text("stop")).unwrap(), STOP);
-        assert_eq!(target("position", &Value::Float(41.6)).unwrap(), 42);
-        assert!(target("position", &Value::Float(101.0)).is_err());
-        assert!(target("position", &text("40")).is_err());
-        assert!(target("control", &text("tilt")).is_err());
-        assert!(target("moving", &text("up")).is_err());
+        assert_eq!(target("control", &text("open"), 1.0).unwrap(), 100);
+        assert_eq!(target("control", &text("close"), 1.0).unwrap(), 0);
+        assert_eq!(target("control", &text("stop"), 1.0).unwrap(), STOP);
+        assert_eq!(target("position", &Value::Float(41.6), 1.0).unwrap(), 42);
+        assert!(target("position", &Value::Float(101.0), 1.0).is_err());
+        assert!(target("position", &text("40"), 1.0).is_err());
+        assert!(target("control", &text("tilt"), 1.0).is_err());
+        assert!(target("moving", &text("up"), 1.0).is_err());
+    }
+
+    #[test]
+    fn an_all_or_nothing_shutter_takes_zero_or_a_hundred() {
+        let status = &fixture()["homestatus"]["body"]["home"]["modules"][3];
+        assert!((decode_step(status) - 100.0).abs() < f64::EPSILON);
+        assert!((decode_step(&json!({})) - 1.0).abs() < f64::EPSILON);
+        assert_eq!(target("position", &Value::Float(0.0), 100.0).unwrap(), 0);
+        assert_eq!(
+            target("position", &Value::Float(100.0), 100.0).unwrap(),
+            100
+        );
+        assert!(target("position", &Value::Float(40.0), 100.0).is_err());
+        assert_eq!(target("position", &Value::Float(40.0), 20.0).unwrap(), 40);
     }
 }
